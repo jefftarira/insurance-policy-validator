@@ -46,6 +46,9 @@ export function PatientSelector({
                 : "border border-[var(--border)] hover:border-[var(--text-muted)]",
             ].join(" ")}
           >
+            <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-2)] px-1.5 py-0.5 rounded-[3px]">
+              {patient.id}
+            </span>
             <h3 className="font-display font-bold text-[22px] leading-[26px] -tracking-[0.015em] text-[var(--text)]">
               {patient.name}
             </h3>
