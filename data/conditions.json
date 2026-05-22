@@ -1,0 +1,51 @@
+{
+  "P1": {
+    "patient_id": "P1",
+    "declared_conditions": [
+      "alergia_penicilina",
+      "migrana_episodica"
+    ],
+    "excluded_diagnoses": [
+      "anafilaxia_penicilina",
+      "migrana_cronica_refractaria"
+    ]
+  },
+  "P2": {
+    "patient_id": "P2",
+    "declared_conditions": [
+      "hipertension_arterial",
+      "dislipidemia",
+      "diabetes_tipo_2"
+    ],
+    "excluded_diagnoses": [
+      "infarto_miocardio_agudo",
+      "enfermedad_renal_diabetica",
+      "retinopatia_diabetica"
+    ]
+  },
+  "P3": {
+    "patient_id": "P3",
+    "declared_conditions": [
+      "asma_bronquial",
+      "rinitis_alergica_estacional",
+      "reflujo_gastroesofagico"
+    ],
+    "excluded_diagnoses": [
+      "crisis_asmatica",
+      "estatus_asmatico",
+      "neumonia_obstructiva"
+    ]
+  },
+  "P4": {
+    "patient_id": "P4",
+    "declared_conditions": [
+      "osteoporosis",
+      "hipertension_arterial_controlada",
+      "artrosis_rodilla"
+    ],
+    "excluded_diagnoses": [
+      "fractura_patologica_vertebral",
+      "evento_cardiovascular_mayor"
+    ]
+  }
+}

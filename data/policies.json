@@ -1,0 +1,34 @@
+{
+  "POL-2031": {
+    "policy_id": "POL-2031",
+    "patient_id": "P1",
+    "plan": "Oro",
+    "valid_until": "2027-08-15",
+    "deductible_usd": 80,
+    "coverage_pct": 100
+  },
+  "POL-1875": {
+    "policy_id": "POL-1875",
+    "patient_id": "P2",
+    "plan": "Plata",
+    "valid_until": "2026-03-15",
+    "deductible_usd": 150,
+    "coverage_pct": 80
+  },
+  "POL-3022": {
+    "policy_id": "POL-3022",
+    "patient_id": "P3",
+    "plan": "Plata",
+    "valid_until": "2027-02-28",
+    "deductible_usd": 120,
+    "coverage_pct": 80
+  },
+  "POL-4408": {
+    "policy_id": "POL-4408",
+    "patient_id": "P4",
+    "plan": "Platino",
+    "valid_until": "2028-11-30",
+    "deductible_usd": 40,
+    "coverage_pct": 100
+  }
+}
