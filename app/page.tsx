@@ -9,16 +9,10 @@ import { EmailInputs } from "@/components/email-inputs";
 import { AgentTimeline } from "@/components/agent-timeline";
 import { EmailPreviews } from "@/components/email-preview";
 import patientsRaw from "@/data/patients.json";
-import proceduresRaw from "@/data/procedures.json";
 import diagnosesRaw from "@/data/diagnoses.json";
-import {
-  PatientsSchema,
-  ProceduresSchema,
-  DiagnosesSchema,
-} from "@/lib/types";
+import { PatientsSchema, DiagnosesSchema } from "@/lib/types";
 
 const patients = PatientsSchema.parse(patientsRaw);
-const procedures = ProceduresSchema.parse(proceduresRaw);
 const diagnoses = DiagnosesSchema.parse(diagnosesRaw);
 
 function validEmail(s: string) {
@@ -28,7 +22,6 @@ function validEmail(s: string) {
 export default function Home() {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [diagnosisIds, setDiagnosisIds] = useState<string[]>([]);
-  const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [admissionsEmail, setAdmissionsEmail] = useState("");
   const [caseManagerEmail, setCaseManagerEmail] = useState("");
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
@@ -38,12 +31,6 @@ export default function Home() {
 
   function toggleDiagnosis(id: string) {
     setDiagnosisIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }
-
-  function toggleService(id: string) {
-    setServiceIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   }
@@ -98,7 +85,6 @@ export default function Home() {
             admissions_email: admissionsEmail,
             case_manager_email: caseManagerEmail,
             diagnosis_ids: diagnosisIds,
-            service_ids: serviceIds,
           },
         },
       },
@@ -106,9 +92,10 @@ export default function Home() {
   }
 
   const selectedPatient = patientId ? patients[patientId] : null;
-  const totalAdmissionCost =
-    diagnosisIds.reduce((acc, id) => acc + (diagnoses[id]?.cost_usd ?? 0), 0) +
-    serviceIds.reduce((acc, id) => acc + (procedures[id]?.cost_usd ?? 0), 0);
+  const totalAdmissionCost = diagnosisIds.reduce(
+    (acc, id) => acc + (diagnoses[id]?.cost_usd ?? 0),
+    0,
+  );
   const selectedDiagnosisLabels = diagnosisIds
     .map((id) => diagnoses[id]?.label)
     .filter((l): l is string => !!l);
@@ -131,17 +118,15 @@ export default function Home() {
     const adm = admissionsEmail || "admisiones@hospital.demo";
     const cm = caseManagerEmail || "gestor@aseguradora.demo";
     const dx = diagnosisIds.length > 0 ? diagnosisIds : ["apendicitis_aguda"];
-    const svc = serviceIds.length > 0 ? serviceIds : ["rx_simple", "lab_basico"];
     return `curl -X POST ${origin}/api/webhook/admission \\
   -H "Content-Type: application/json" \\
   -d '{
     "patient_id": "${p}",
     "admissions_email": "${adm}",
     "case_manager_email": "${cm}",
-    "diagnosis_ids": ${JSON.stringify(dx)},
-    "service_ids": ${JSON.stringify(svc)}
+    "diagnosis_ids": ${JSON.stringify(dx)}
   }'`;
-  }, [patientId, admissionsEmail, caseManagerEmail, diagnosisIds, serviceIds, origin]);
+  }, [patientId, admissionsEmail, caseManagerEmail, diagnosisIds, origin]);
 
   return (
     <main className="container mx-auto max-w-[1280px] px-4 sm:px-8 py-6 sm:py-10 flex-1">
@@ -166,15 +151,12 @@ export default function Home() {
         />
       </div>
 
-      <SectionLabel step="02" label="Diagnósticos y servicios" />
+      <SectionLabel step="02" label="Diagnósticos" />
       <div className="mb-6">
         <CatalogSelector
           diagnoses={diagnoses}
-          services={procedures}
           selectedDiagnosisIds={diagnosisIds}
-          selectedServiceIds={serviceIds}
           onToggleDiagnosis={toggleDiagnosis}
-          onToggleService={toggleService}
           disabled={isRunning}
         />
       </div>
@@ -211,7 +193,7 @@ export default function Home() {
           aria-live="polite"
         >
           {formReady
-            ? `Listo — paciente ${patientId} · ${diagnosisIds.length} dx + ${serviceIds.length} svc · 2 emails válidos.`
+            ? `Listo — paciente ${patientId} · ${diagnosisIds.length} diagnóstico${diagnosisIds.length === 1 ? "" : "s"} · 2 emails válidos.`
             : !patientId
               ? "Selecciona paciente."
               : diagnosisIds.length === 0

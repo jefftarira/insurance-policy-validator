@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
 import { buildTools, type AgentContext, type SendResult } from "@/lib/tools";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
-import { getPatient, getPolicy, getProcedures, getDiagnoses } from "@/lib/data";
+import { getPatient, getPolicy, getDiagnoses } from "@/lib/data";
 import {
   sendOne,
   admissionsTemplate,
@@ -17,7 +17,6 @@ export type AgentParams = {
   admissionsEmail: string;
   caseManagerEmail: string;
   diagnosisIds: string[];
-  serviceIds?: string[];
 };
 
 export function runAdmissionAgent(params: AgentParams) {
@@ -27,16 +26,10 @@ export function runAdmissionAgent(params: AgentParams) {
   }
 
   const selectedDiagnoses = getDiagnoses(params.diagnosisIds);
-  const selectedServices = getProcedures(params.serviceIds ?? []);
-  const diagnosisCost = selectedDiagnoses.reduce(
+  const totalAdmissionCost = selectedDiagnoses.reduce(
     (acc, d) => acc + d.cost_usd,
     0,
   );
-  const serviceCost = selectedServices.reduce(
-    (acc, p) => acc + p.cost_usd,
-    0,
-  );
-  const totalAdmissionCost = diagnosisCost + serviceCost;
 
   const ctx: AgentContext = {
     patientId: params.patientId,
@@ -64,11 +57,6 @@ export function runAdmissionAgent(params: AgentParams) {
       id: d.id,
       label: d.label,
       cost_usd: d.cost_usd,
-    })),
-    services: selectedServices.map((p) => ({
-      id: p.id,
-      label: p.label,
-      cost_usd: p.cost_usd,
     })),
     clinical_notes: patient.clinical_notes,
     notification_recipients: {

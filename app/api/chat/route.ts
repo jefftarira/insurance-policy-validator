@@ -13,7 +13,6 @@ type ChatBody = {
     admissions_email?: string;
     case_manager_email?: string;
     diagnosis_ids?: string[];
-    service_ids?: string[];
   };
 };
 
@@ -31,7 +30,6 @@ export async function POST(req: Request) {
     admissions_email: body.data?.admissions_email,
     case_manager_email: body.data?.case_manager_email,
     diagnosis_ids: body.data?.diagnosis_ids,
-    service_ids: body.data?.service_ids,
   });
 
   if (!params.success) {
@@ -53,7 +51,6 @@ export async function POST(req: Request) {
     admissionsEmail: params.data.admissions_email,
     caseManagerEmail: params.data.case_manager_email,
     diagnosisIds: params.data.diagnosis_ids,
-    serviceIds: params.data.service_ids,
   });
 
   return result.toUIMessageStreamResponse({

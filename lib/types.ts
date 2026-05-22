@@ -38,17 +38,12 @@ export const CatalogItemSchema = z.object({
   cost_usd: z.number(),
 });
 
-export const ProceduresSchema = z.record(z.string(), CatalogItemSchema);
 export const DiagnosesSchema = z.record(z.string(), CatalogItemSchema);
-
-// Kept as an alias for existing imports; same shape as CatalogItem.
-export const ProcedureSchema = CatalogItemSchema;
 
 export type Patient = z.infer<typeof PatientSchema>;
 export type Policy = z.infer<typeof PoliciesSchema>[string];
 export type Conditions = z.infer<typeof ConditionsSchema>[string];
 export type CatalogItem = z.infer<typeof CatalogItemSchema>;
-export type Procedure = CatalogItem;
 export type Diagnosis = CatalogItem;
 
 export const AdmissionEventSchema = z.object({
@@ -56,7 +51,6 @@ export const AdmissionEventSchema = z.object({
   admissions_email: z.email(),
   case_manager_email: z.email(),
   diagnosis_ids: z.array(z.string()).min(1),
-  service_ids: z.array(z.string()).optional(),
 });
 
 export type AdmissionEvent = z.infer<typeof AdmissionEventSchema>;

@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     admissionsEmail: parsed.data.admissions_email,
     caseManagerEmail: parsed.data.case_manager_email,
     diagnosisIds: parsed.data.diagnosis_ids,
-    serviceIds: parsed.data.service_ids,
   });
 
   // Block until stream finishes — webhook returns a synchronous JSON
@@ -60,7 +59,6 @@ export async function GET() {
       admissions_email: "admisiones@hospital.demo",
       case_manager_email: "gestor@aseguradora.demo",
       diagnosis_ids: ["apendicitis_aguda"],
-      service_ids: ["rx_simple", "lab_basico"],
     },
   });
 }
