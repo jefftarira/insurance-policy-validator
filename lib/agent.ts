@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
 import { buildTools, type AgentContext, type SendResult } from "@/lib/tools";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
-import { getPatient, getPolicy } from "@/lib/data";
+import { getPatient, getPolicy, getProcedures } from "@/lib/data";
 import {
   sendOne,
   admissionsTemplate,
@@ -16,6 +16,7 @@ export type AgentParams = {
   patientId: string;
   admissionsEmail: string;
   caseManagerEmail: string;
+  additionalProcedureIds?: string[];
 };
 
 export function runAdmissionAgent(params: AgentParams) {
@@ -33,6 +34,13 @@ export function runAdmissionAgent(params: AgentParams) {
 
   const tools = buildTools(ctx);
 
+  const additionalProcedures = getProcedures(params.additionalProcedureIds ?? []);
+  const additionalCost = additionalProcedures.reduce(
+    (acc, p) => acc + p.cost_usd,
+    0,
+  );
+  const totalAdmissionCost = patient.admission_cost_usd + additionalCost;
+
   const userPayload = {
     event: "admission_to_emergency",
     today_date: new Date().toISOString().slice(0, 10),
@@ -43,7 +51,16 @@ export function runAdmissionAgent(params: AgentParams) {
     current_diagnosis: patient.current_diagnosis,
     current_diagnosis_label: patient.current_diagnosis_label,
     admission_time: patient.admission_time,
-    admission_cost_usd: patient.admission_cost_usd,
+    admission_cost_usd: totalAdmissionCost,
+    cost_breakdown: {
+      base_admission_usd: patient.admission_cost_usd,
+      additional_procedures: additionalProcedures.map((p) => ({
+        id: p.id,
+        label: p.label,
+        cost_usd: p.cost_usd,
+      })),
+      total_usd: totalAdmissionCost,
+    },
     clinical_notes: patient.clinical_notes,
     notification_recipients: {
       admissions_email: params.admissionsEmail,

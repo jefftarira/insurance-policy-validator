@@ -10,6 +10,7 @@ type Props = {
   status: "idle" | "submitted" | "streaming" | "ready" | "error";
   errorMessage?: string;
   patient?: Patient | null;
+  totalAdmissionCost?: number;
 };
 
 // Helper: walk message parts and split into renderable items in order.
@@ -198,7 +199,11 @@ type Decision = {
   amountSublabel: string;
 };
 
-function deriveDecision(outputs: ToolOutputs, patient?: Patient | null): Decision | null {
+function deriveDecision(
+  outputs: ToolOutputs,
+  patient?: Patient | null,
+  totalAdmissionCost?: number,
+): Decision | null {
   const { policy, conditions, copay } = outputs;
   if (!policy) return null;
 
@@ -234,13 +239,15 @@ function deriveDecision(outputs: ToolOutputs, patient?: Patient | null): Decisio
     decisionColor = "var(--running)";
   }
 
+  const fullCost = totalAdmissionCost ?? patient?.admission_cost_usd;
+
   let amountLabel: string;
   let amountSublabel: string;
   if (copay && typeof copay.patient_copay_usd === "number") {
     amountLabel = `$${copay.patient_copay_usd}`;
     amountSublabel = `copago · costo total $${copay.admission_cost_usd ?? "—"}`;
-  } else if ((expired || excluded || notFound) && patient) {
-    amountLabel = `$${patient.admission_cost_usd}`;
+  } else if ((expired || excluded || notFound) && fullCost != null) {
+    amountLabel = `$${fullCost}`;
     amountSublabel = "paciente paga total";
   } else {
     amountLabel = "—";
@@ -333,13 +340,19 @@ function groupParallelTools(items: RenderItem[]): Array<RenderItem | RenderItem[
   return out;
 }
 
-export function AgentTimeline({ messages, status, errorMessage, patient }: Props) {
+export function AgentTimeline({
+  messages,
+  status,
+  errorMessage,
+  patient,
+  totalAdmissionCost,
+}: Props) {
   const items = flatten(messages);
   const grouped = groupParallelTools(items);
   const isStreaming = status === "submitted" || status === "streaming";
   const hasContent = grouped.length > 0;
   const outputs = extractToolOutputs(messages);
-  const decision = deriveDecision(outputs, patient);
+  const decision = deriveDecision(outputs, patient, totalAdmissionCost);
 
   return (
     <section

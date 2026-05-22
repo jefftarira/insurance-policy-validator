@@ -35,15 +35,25 @@ export const ConditionsSchema = z.record(
 
 export const PatientsSchema = z.record(z.string(), PatientSchema);
 
+export const ProcedureSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  cost_usd: z.number(),
+});
+
+export const ProceduresSchema = z.record(z.string(), ProcedureSchema);
+
 export type Patient = z.infer<typeof PatientSchema>;
 export type Policy = z.infer<typeof PoliciesSchema>[string];
 export type Conditions = z.infer<typeof ConditionsSchema>[string];
+export type Procedure = z.infer<typeof ProcedureSchema>;
 
 export const AdmissionEventSchema = z.object({
   patient_id: z.string().min(1),
   current_diagnosis: z.string().min(1).optional(),
   admissions_email: z.email(),
   case_manager_email: z.email(),
+  additional_procedure_ids: z.array(z.string()).optional(),
 });
 
 export type AdmissionEvent = z.infer<typeof AdmissionEventSchema>;

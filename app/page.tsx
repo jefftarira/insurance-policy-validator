@@ -4,13 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { PatientSelector } from "@/components/patient-selector";
+import { ProcedureSelector } from "@/components/procedure-selector";
 import { EmailInputs } from "@/components/email-inputs";
 import { AgentTimeline } from "@/components/agent-timeline";
 import { EmailPreviews } from "@/components/email-preview";
 import patientsRaw from "@/data/patients.json";
-import { PatientsSchema } from "@/lib/types";
+import proceduresRaw from "@/data/procedures.json";
+import { PatientsSchema, ProceduresSchema } from "@/lib/types";
 
 const patients = PatientsSchema.parse(patientsRaw);
+const procedures = ProceduresSchema.parse(proceduresRaw);
 
 function validEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -18,12 +21,19 @@ function validEmail(s: string) {
 
 export default function Home() {
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [procedureIds, setProcedureIds] = useState<string[]>([]);
   const [admissionsEmail, setAdmissionsEmail] = useState("");
   const [caseManagerEmail, setCaseManagerEmail] = useState("");
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [endedAt, setEndedAt] = useState<number | null>(null);
   const [origin, setOrigin] = useState("$URL");
+
+  function toggleProcedure(id: string) {
+    setProcedureIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
 
   useEffect(() => {
     const stored = localStorage.getItem("er-theme") as "light" | "dark" | null;
@@ -73,6 +83,7 @@ export default function Home() {
             patient_id: patientId,
             admissions_email: admissionsEmail,
             case_manager_email: caseManagerEmail,
+            additional_procedure_ids: procedureIds,
           },
         },
       },
@@ -80,6 +91,13 @@ export default function Home() {
   }
 
   const selectedPatient = patientId ? patients[patientId] : null;
+  const totalAdmissionCost = selectedPatient
+    ? selectedPatient.admission_cost_usd +
+      procedureIds.reduce(
+        (acc, id) => acc + (procedures[id]?.cost_usd ?? 0),
+        0,
+      )
+    : 0;
   const elapsedMs =
     startedAt && endedAt
       ? endedAt - startedAt
@@ -94,15 +112,18 @@ export default function Home() {
         ?.current_diagnosis ?? "apendicitis_aguda";
     const adm = admissionsEmail || "admisiones@hospital.demo";
     const cm = caseManagerEmail || "gestor@aseguradora.demo";
+    const procIds = procedureIds.length > 0 ? procedureIds : ["rx_simple", "lab_basico"];
+    const procLine = JSON.stringify(procIds);
     return `curl -X POST ${origin}/api/webhook/admission \\
   -H "Content-Type: application/json" \\
   -d '{
     "patient_id": "${p}",
     "current_diagnosis": "${dx}",
     "admissions_email": "${adm}",
-    "case_manager_email": "${cm}"
+    "case_manager_email": "${cm}",
+    "additional_procedure_ids": ${procLine}
   }'`;
-  }, [patientId, admissionsEmail, caseManagerEmail, origin]);
+  }, [patientId, admissionsEmail, caseManagerEmail, procedureIds, origin]);
 
   return (
     <main className="container mx-auto max-w-[1280px] px-4 sm:px-8 py-6 sm:py-10 flex-1">
@@ -127,7 +148,18 @@ export default function Home() {
         />
       </div>
 
-      <SectionLabel step="02" label="Emails de destino" />
+      <SectionLabel step="02" label="Procedimientos adicionales (opcional)" />
+      <div className="mb-6">
+        <ProcedureSelector
+          procedures={procedures}
+          selectedIds={procedureIds}
+          baseAdmissionCost={selectedPatient?.admission_cost_usd ?? 0}
+          onToggle={toggleProcedure}
+          disabled={isRunning}
+        />
+      </div>
+
+      <SectionLabel step="03" label="Emails de destino" />
       <div className="mb-5">
         <EmailInputs
           admissionsEmail={admissionsEmail}
@@ -169,13 +201,14 @@ export default function Home() {
         </div>
       </div>
 
-      <SectionLabel step="03" label="Agente en vivo" className="mt-9" />
+      <SectionLabel step="04" label="Agente en vivo" className="mt-9" />
       <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-6">
         <AgentTimeline
           messages={messages}
           status={status}
           errorMessage={error?.message}
           patient={selectedPatient}
+          totalAdmissionCost={totalAdmissionCost}
         />
         <EmailPreviews
           patient={selectedPatient}
