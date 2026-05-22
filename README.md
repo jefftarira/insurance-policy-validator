@@ -46,15 +46,16 @@ Edita `.env` y agrega:
 pnpm dev
 ```
 
-Abre **http://localhost:3000** (no `127.0.0.1` — el cert TLS y CORS de Next dev mode prefieren `localhost`).
+Abre **http://localhost:3000**. Si te sale página en blanco, revisá con `lsof -nP -iTCP:3000 -sTCP:LISTEN` que ningún otro proceso (otro Vite/Next, etc.) tenga tomado `[::1]:3000` — en macOS `localhost` resuelve primero a `::1` (IPv6) y podés terminar pegando contra el proceso equivocado. Workaround: usá `http://127.0.0.1:3000` o matá el proceso ajeno. El `next.config.ts` ya tiene `allowedDevOrigins: ["127.0.0.1"]` para que ambos hostnames pasen el CORS dev de Next 16.
 
 ### 5. Usarlo
 
 **Desde la UI:**
 1. Selecciona uno de los 4 pacientes precargados (María, Carlos, Ana, Luis)
-2. Ingresa los emails de admisiones y del gestor de casos
-3. Click en "Procesar ingreso a emergencia"
-4. Verás el agente razonando en vivo, llamando tools en paralelo, y los emails llegando
+2. Selecciona al menos un diagnóstico del catálogo (cada uno tiene su costo de consulta/evaluación)
+3. Ingresa los emails de admisiones y del gestor de casos
+4. Click en "Procesar ingreso a emergencia"
+5. Verás el agente razonando en vivo, llamando tools en paralelo, y los emails llegando
 
 **Desde curl** (mismo backend, sin UI):
 
@@ -64,18 +65,30 @@ curl -X POST http://localhost:3000/api/webhook/admission \
   -d '{
     "patient_id": "P1",
     "admissions_email": "admisiones@hospital.demo",
-    "case_manager_email": "gestor@aseguradora.demo"
+    "case_manager_email": "gestor@aseguradora.demo",
+    "diagnosis_ids": ["apendicitis_aguda"]
   }'
 ```
 
+`diagnosis_ids` requiere al menos un ID del catálogo (`data/diagnoses.json`). El total facturado se calcula sumando los costos de los diagnósticos seleccionados.
+
 ## Pacientes precargados
 
-| ID | Paciente | Edad | Diagnóstico | Costo USD | Resultado esperado |
+El diagnóstico ya no viene fijo por paciente — vos lo elegís del catálogo en cada corrida. Cada paciente trae solo su póliza y la lista de pre-existencias excluidas por contrato. Para reproducir los 4 casos clínicos clásicos del demo, elegí estos diagnósticos:
+
+| ID | Paciente | Edad | Plan | Vigencia | Diagnósticos excluidos por contrato |
 |---|---|---|---|---|---|
-| P1 | María Soto | 34 | Apendicitis aguda | $1,800 | Cobertura plena (copago $80) |
-| P2 | Carlos Núñez | 52 | Dolor torácico | $450 | Cobertura denegada (póliza vencida) |
-| P3 | Ana Reyes | 28 | Crisis asmática | $280 | Cobertura denegada (exclusión por asma declarada) |
-| P4 | Luis Vargas | 67 | Fractura de cadera | $4,500 | Cobertura plena (copago $40) |
+| P1 | María Soto | 34 | Oro (100%) | hasta 2027-08-15 | `anafilaxia_penicilina`, `migrana_cronica_refractaria` |
+| P2 | Carlos Núñez | 52 | Plata (80%) | **vencida 2026-03-15** | `infarto_miocardio_agudo`, `enfermedad_renal_diabetica`, `retinopatia_diabetica` |
+| P3 | Ana Reyes | 28 | Plata (80%) | hasta 2027-02-28 | `crisis_asmatica`, `estatus_asmatico`, `neumonia_obstructiva` |
+| P4 | Luis Vargas | 67 | Platino (100%) | hasta 2028-11-30 | `fractura_patologica_vertebral`, `evento_cardiovascular_mayor` |
+
+**Historias sugeridas:**
+- **P1 + `apendicitis_aguda`** → cobertura plena (copago = deducible $80).
+- **P2 + cualquier diagnóstico** → cobertura denegada (póliza vencida — la fecha hoy es posterior a `valid_until`).
+- **P3 + `crisis_asmatica`** → cobertura denegada por exclusión de pre-existencia.
+- **P4 + `fractura_cadera`** → cobertura plena (copago = deducible $40).
+- **P3 + `gastroenteritis_aguda`** → cobertura plena (mismo paciente, diagnóstico no excluido).
 
 ## Notas
 
@@ -87,8 +100,6 @@ curl -X POST http://localhost:3000/api/webhook/admission \
 
 **Email entrega:** primer envío desde un nuevo sender suele caer en spam. Revisa la carpeta de spam si no aparece en el inbox.
 
-**Localhost vs 127.0.0.1:** Next 16 trata ambos como orígenes distintos. El `next.config.ts` ya tiene `allowedDevOrigins: ["127.0.0.1"]` para que funcione en ambos, pero `localhost` es el camino confirmado.
-
 ## Estructura
 
 ```
@@ -97,21 +108,23 @@ app/
   api/webhook/admission/route.ts   # endpoint para curl
   page.tsx                         # UI principal
 components/
-  agent-timeline.tsx               # render del agente razonando
+  agent-timeline.tsx               # render del agente razonando + DecisionBanner
   tool-card.tsx                    # cada tool call como una línea
   email-preview.tsx                # preview de emails enviados
-  patient-selector.tsx             # selector de pacientes
+  patient-selector.tsx             # selector de pacientes (ID + nombre + edad)
+  catalog-selector.tsx             # multi-select de diagnósticos del catálogo
   email-inputs.tsx                 # inputs de email
 lib/
   agent.ts                         # orquesta streamText + tools + safety net
-  tools.ts                         # validate_policy, check_preexisting, compute_copay, send_notifications
+  tools.ts                         # validate_policy, check_preexisting (multi-dx), compute_copay, send_notifications
   prompt.ts                        # system prompt del agente
   email.ts                         # nodemailer + Brevo SMTP + templates
   ratelimit.ts                     # in-memory sliding window
-  data.ts                          # carga JSON de pacientes/pólizas/condiciones
-  types.ts                         # schemas Zod
+  data.ts                          # carga JSON de pacientes/pólizas/condiciones/diagnósticos
+  types.ts                         # schemas Zod (Patient, Policy, Conditions, CatalogItem, AdmissionEvent)
 data/
-  patients.json                    # 4 pacientes con costos de ingreso
-  policies.json                    # pólizas (Oro/Plata/Platino) — sin status, vigencia vía valid_until
-  conditions.json                  # pre-existencias declaradas y diagnósticos excluidos
+  patients.json                    # 4 pacientes (sin diagnóstico fijo — se elige por corrida)
+  policies.json                    # pólizas (Oro/Plata/Platino) — vigencia vía valid_until
+  conditions.json                  # pre-existencias declaradas y diagnósticos excluidos por paciente
+  diagnoses.json                   # catálogo de 15 diagnósticos con costo de consulta/evaluación
 ```
