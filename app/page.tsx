@@ -65,6 +65,7 @@ export default function Home() {
 
   const formReady =
     patientId !== null &&
+    procedureIds.length > 0 &&
     validEmail(admissionsEmail) &&
     validEmail(caseManagerEmail);
 
@@ -148,7 +149,7 @@ export default function Home() {
         />
       </div>
 
-      <SectionLabel step="02" label="Procedimientos adicionales (opcional)" />
+      <SectionLabel step="02" label="Servicios del ingreso" />
       <div className="mb-6">
         <ProcedureSelector
           procedures={procedures}
@@ -191,8 +192,12 @@ export default function Home() {
           aria-live="polite"
         >
           {formReady
-            ? `Listo — paciente ${patientId} + 2 emails válidos.`
-            : "Selecciona paciente y completa los 2 emails."}
+            ? `Listo — paciente ${patientId} · ${procedureIds.length} servicio${procedureIds.length === 1 ? "" : "s"} · 2 emails válidos.`
+            : !patientId
+              ? "Selecciona paciente."
+              : procedureIds.length === 0
+                ? "Selecciona al menos un servicio del ingreso."
+                : "Completa los 2 emails."}
           {elapsedMs !== null && (
             <span className="ml-3 font-mono">
               {(elapsedMs / 1000).toFixed(1)}s
