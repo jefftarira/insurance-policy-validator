@@ -47,13 +47,11 @@ function PreviewCard({
   recipientEmail,
   patient,
   toolStates,
-  variant,
 }: {
   recipientLabel: string;
   recipientEmail: string;
   patient: Patient | null;
   toolStates: Record<string, { state: string; output?: unknown }>;
-  variant: "admissions" | "case_manager";
 }) {
   const policy = toolStates.validate_policy?.output as
     | { plan?: string; valid_until?: string; deductible_usd?: number; coverage_pct?: number }
@@ -65,21 +63,16 @@ function PreviewCard({
     | { admission_cost_usd?: number; covered_by_policy_usd?: number; patient_copay_usd?: number }
     | undefined;
   const sent = toolStates.send_notifications?.output as
-    | { success?: boolean; admissions_message_id?: string; case_manager_message_id?: string }
+    | { success?: boolean }
     | undefined;
 
   const today = new Date().toISOString().slice(0, 10);
+  const policyExpired = !!policy?.valid_until && policy.valid_until < today;
   const policyStatusLabel = policy?.valid_until
-    ? policy.valid_until < today
+    ? policyExpired
       ? `vencida ${policy.valid_until}`
       : `vigente hasta ${policy.valid_until}`
     : null;
-
-  const messageId = sent
-    ? variant === "admissions"
-      ? sent.admissions_message_id
-      : sent.case_manager_message_id
-    : undefined;
 
   return (
     <article className="bg-[var(--surface)] border border-[var(--border)] rounded-md p-6">
@@ -133,6 +126,14 @@ function PreviewCard({
             <span>
               Costo ${copay.admission_cost_usd} · cubre ${copay.covered_by_policy_usd} · paciente paga ${copay.patient_copay_usd}
             </span>
+          ) : conditions?.diagnosis_excluded && patient ? (
+            <span>
+              Diagnóstico excluido · paciente paga total ${patient.admission_cost_usd}
+            </span>
+          ) : policyExpired && patient ? (
+            <span>
+              Póliza vencida · paciente paga total ${patient.admission_cost_usd}
+            </span>
           ) : (
             <em className="text-[var(--text-muted)] not-italic">esperando cálculo…</em>
           )}
@@ -140,7 +141,7 @@ function PreviewCard({
         <Row label="Estado del envío">
           {sent?.success ? (
             <span style={{ color: "var(--success)" }} className="font-medium">
-              ✓ Enviado · {messageId ? messageId.slice(0, 12) + "…" : ""}
+              ✓ Enviado
             </span>
           ) : sent && !sent.success ? (
             <span style={{ color: "var(--alert)" }} className="font-medium">
@@ -151,10 +152,6 @@ function PreviewCard({
           )}
         </Row>
       </dl>
-
-      <p className="mt-5 pt-4 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)]">
-        Email final renderizado en Outfit. Subject + body completo se envían vía Resend.
-      </p>
     </article>
   );
 }
@@ -185,14 +182,12 @@ export function EmailPreviews({
         recipientEmail={admissionsEmail}
         patient={patient}
         toolStates={toolStates}
-        variant="admissions"
       />
       <PreviewCard
         recipientLabel="Gestor de Casos — Seguro"
         recipientEmail={caseManagerEmail}
         patient={patient}
         toolStates={toolStates}
-        variant="case_manager"
       />
     </aside>
   );
