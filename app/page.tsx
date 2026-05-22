@@ -175,6 +175,7 @@ export default function Home() {
           messages={messages}
           status={status}
           errorMessage={error?.message}
+          patient={selectedPatient}
         />
         <EmailPreviews
           patient={selectedPatient}
