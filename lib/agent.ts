@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
 import { buildTools, type AgentContext, type SendResult } from "@/lib/tools";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
-import { getPatient, getPolicy, getProcedures } from "@/lib/data";
+import { getPatient, getPolicy, getProcedures, getDiagnoses } from "@/lib/data";
 import {
   sendOne,
   admissionsTemplate,
@@ -16,7 +16,8 @@ export type AgentParams = {
   patientId: string;
   admissionsEmail: string;
   caseManagerEmail: string;
-  additionalProcedureIds?: string[];
+  diagnosisIds: string[];
+  serviceIds?: string[];
 };
 
 export function runAdmissionAgent(params: AgentParams) {
@@ -25,20 +26,28 @@ export function runAdmissionAgent(params: AgentParams) {
     throw new Error(`Paciente no encontrado: ${params.patientId}`);
   }
 
+  const selectedDiagnoses = getDiagnoses(params.diagnosisIds);
+  const selectedServices = getProcedures(params.serviceIds ?? []);
+  const diagnosisCost = selectedDiagnoses.reduce(
+    (acc, d) => acc + d.cost_usd,
+    0,
+  );
+  const serviceCost = selectedServices.reduce(
+    (acc, p) => acc + p.cost_usd,
+    0,
+  );
+  const totalAdmissionCost = diagnosisCost + serviceCost;
+
   const ctx: AgentContext = {
     patientId: params.patientId,
     admissionsEmail: params.admissionsEmail,
     caseManagerEmail: params.caseManagerEmail,
+    diagnosisIds: params.diagnosisIds,
+    diagnosisLabel: selectedDiagnoses.map((d) => d.label).join(", "),
     sendState: { sent: false, result: null },
   };
 
   const tools = buildTools(ctx);
-
-  const selectedServices = getProcedures(params.additionalProcedureIds ?? []);
-  const totalAdmissionCost = selectedServices.reduce(
-    (acc, p) => acc + p.cost_usd,
-    0,
-  );
 
   const userPayload = {
     event: "admission_to_emergency",
@@ -47,10 +56,15 @@ export function runAdmissionAgent(params: AgentParams) {
     patient_name: patient.name,
     patient_age: patient.age,
     policy_id: patient.policy_id,
-    current_diagnosis: patient.current_diagnosis,
-    current_diagnosis_label: patient.current_diagnosis_label,
+    current_diagnosis_ids: params.diagnosisIds,
+    current_diagnosis_labels: selectedDiagnoses.map((d) => d.label),
     admission_time: patient.admission_time,
     admission_cost_usd: totalAdmissionCost,
+    diagnoses: selectedDiagnoses.map((d) => ({
+      id: d.id,
+      label: d.label,
+      cost_usd: d.cost_usd,
+    })),
     services: selectedServices.map((p) => ({
       id: p.id,
       label: p.label,
@@ -89,7 +103,7 @@ export function runAdmissionAgent(params: AgentParams) {
           : "desconocida";
         const templateArgs = {
           patientName: patient.name,
-          diagnosis: patient.current_diagnosis_label,
+          diagnosis: ctx.diagnosisLabel || "sin diagnóstico declarado",
           decision,
           rationale,
           policyPlan: policy?.plan ?? "desconocido",

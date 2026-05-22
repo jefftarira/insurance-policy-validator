@@ -9,6 +9,7 @@ type Props = {
   caseManagerEmail: string;
   messages: UIMessage[];
   totalAdmissionCost: number;
+  diagnosisLabels: string[];
 };
 
 type ToolPart = {
@@ -49,12 +50,14 @@ function PreviewCard({
   patient,
   toolStates,
   totalAdmissionCost,
+  diagnosisLabels,
 }: {
   recipientLabel: string;
   recipientEmail: string;
   patient: Patient | null;
   toolStates: Record<string, { state: string; output?: unknown }>;
   totalAdmissionCost: number;
+  diagnosisLabels: string[];
 }) {
   const policy = toolStates.validate_policy?.output as
     | { plan?: string; valid_until?: string; deductible_usd?: number; coverage_pct?: number }
@@ -87,7 +90,11 @@ function PreviewCard({
         {patient ? `Caso: ${patient.name}` : "—"}
       </h3>
       <p className="font-body text-[15px] text-[var(--text-muted)] mt-1">
-        {patient ? patient.current_diagnosis_label : "Sin paciente seleccionado"}
+        {!patient
+          ? "Sin paciente seleccionado"
+          : diagnosisLabels.length > 0
+            ? diagnosisLabels.join(" · ")
+            : "Sin diagnósticos seleccionados"}
       </p>
 
       <hr className="my-5 border-0 border-t border-[var(--border)]" />
@@ -176,6 +183,7 @@ export function EmailPreviews({
   caseManagerEmail,
   messages,
   totalAdmissionCost,
+  diagnosisLabels,
 }: Props) {
   const toolStates = extractToolStates(messages);
 
@@ -187,6 +195,7 @@ export function EmailPreviews({
         patient={patient}
         toolStates={toolStates}
         totalAdmissionCost={totalAdmissionCost}
+        diagnosisLabels={diagnosisLabels}
       />
       <PreviewCard
         recipientLabel="Gestor de Casos — Seguro"
@@ -194,6 +203,7 @@ export function EmailPreviews({
         patient={patient}
         toolStates={toolStates}
         totalAdmissionCost={totalAdmissionCost}
+        diagnosisLabels={diagnosisLabels}
       />
     </aside>
   );

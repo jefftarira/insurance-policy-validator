@@ -11,6 +11,8 @@ export type AgentContext = {
   patientId: string;
   admissionsEmail: string;
   caseManagerEmail: string;
+  diagnosisIds: string[];
+  diagnosisLabel: string;
   sendState: { sent: boolean; result: SendResult | null };
 };
 
@@ -42,8 +44,10 @@ const CopayResult = z.object({
 const ConditionsResult = z.object({
   patient_id: z.string(),
   declared_conditions: z.array(z.string()),
-  diagnosis_excluded: z.boolean(),
   excluded_diagnoses: z.array(z.string()),
+  current_diagnoses: z.array(z.string()),
+  excluded_matches: z.array(z.string()),
+  diagnosis_excluded: z.boolean(),
 });
 
 export function buildTools(ctx: AgentContext) {
@@ -106,21 +110,25 @@ export function buildTools(ctx: AgentContext) {
 
     check_preexisting_conditions: tool({
       description:
-        "Revisa las pre-existencias declaradas del paciente y si el diagnóstico actual está excluido por contrato.",
+        "Revisa las pre-existencias declaradas del paciente y si ALGUNO de los diagnósticos actuales está excluido por contrato. Cruza la lista de current_diagnoses contra excluded_diagnoses del contrato; devuelve excluded_matches con los que sí están excluidos.",
       inputSchema: z.object({
         patient_id: z.string().describe("ID del paciente"),
-        current_diagnosis: z
-          .string()
-          .describe("Identificador del diagnóstico actual"),
+        current_diagnoses: z
+          .array(z.string())
+          .describe("IDs de los diagnósticos seleccionados para este ingreso"),
       }),
-      execute: async ({ patient_id, current_diagnosis }) => {
+      execute: async ({ patient_id, current_diagnoses }) => {
         const cond = getConditions(patient_id);
+        const matches = current_diagnoses.filter((d) =>
+          cond.excluded_diagnoses.includes(d),
+        );
         return ConditionsResult.parse({
           patient_id: cond.patient_id,
           declared_conditions: cond.declared_conditions,
           excluded_diagnoses: cond.excluded_diagnoses,
-          diagnosis_excluded:
-            cond.excluded_diagnoses.includes(current_diagnosis),
+          current_diagnoses,
+          excluded_matches: matches,
+          diagnosis_excluded: matches.length > 0,
         });
       },
     }),
@@ -157,7 +165,7 @@ export function buildTools(ctx: AgentContext) {
 
         const args = {
           patientName: patient?.name ?? ctx.patientId,
-          diagnosis: patient?.current_diagnosis_label ?? "desconocido",
+          diagnosis: ctx.diagnosisLabel || "sin diagnóstico declarado",
           decision,
           rationale,
           policyPlan: policy?.plan ?? "desconocido",

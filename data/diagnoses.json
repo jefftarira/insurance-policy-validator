@@ -1,0 +1,77 @@
+{
+  "apendicitis_aguda": {
+    "id": "apendicitis_aguda",
+    "label": "Apendicitis aguda",
+    "cost_usd": 120
+  },
+  "dolor_toracico": {
+    "id": "dolor_toracico",
+    "label": "Dolor torácico (evaluación)",
+    "cost_usd": 80
+  },
+  "crisis_asmatica": {
+    "id": "crisis_asmatica",
+    "label": "Crisis asmática",
+    "cost_usd": 100
+  },
+  "fractura_cadera": {
+    "id": "fractura_cadera",
+    "label": "Fractura de cadera",
+    "cost_usd": 180
+  },
+  "gastroenteritis_aguda": {
+    "id": "gastroenteritis_aguda",
+    "label": "Gastroenteritis aguda",
+    "cost_usd": 60
+  },
+  "infeccion_urinaria": {
+    "id": "infeccion_urinaria",
+    "label": "Infección urinaria",
+    "cost_usd": 55
+  },
+  "neumonia_obstructiva": {
+    "id": "neumonia_obstructiva",
+    "label": "Neumonía obstructiva",
+    "cost_usd": 140
+  },
+  "estatus_asmatico": {
+    "id": "estatus_asmatico",
+    "label": "Estatus asmático",
+    "cost_usd": 220
+  },
+  "infarto_miocardio_agudo": {
+    "id": "infarto_miocardio_agudo",
+    "label": "Infarto agudo de miocardio",
+    "cost_usd": 300
+  },
+  "evento_cardiovascular_mayor": {
+    "id": "evento_cardiovascular_mayor",
+    "label": "Evento cardiovascular mayor",
+    "cost_usd": 280
+  },
+  "anafilaxia_penicilina": {
+    "id": "anafilaxia_penicilina",
+    "label": "Anafilaxia por penicilina",
+    "cost_usd": 150
+  },
+  "migrana_cronica_refractaria": {
+    "id": "migrana_cronica_refractaria",
+    "label": "Migraña crónica refractaria",
+    "cost_usd": 90
+  },
+  "enfermedad_renal_diabetica": {
+    "id": "enfermedad_renal_diabetica",
+    "label": "Enfermedad renal diabética",
+    "cost_usd": 200
+  },
+  "retinopatia_diabetica": {
+    "id": "retinopatia_diabetica",
+    "label": "Retinopatía diabética",
+    "cost_usd": 110
+  },
+  "fractura_patologica_vertebral": {
+    "id": "fractura_patologica_vertebral",
+    "label": "Fractura patológica vertebral",
+    "cost_usd": 240
+  }
+}

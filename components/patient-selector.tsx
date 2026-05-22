@@ -52,10 +52,10 @@ export function PatientSelector({
               <span className="font-display font-bold text-[15px] leading-[18px] text-[var(--text)] truncate">
                 {patient.name}
               </span>
+              <span className="text-[12px] text-[var(--text-muted)] flex-shrink-0">
+                {patient.age} años
+              </span>
             </div>
-            <p className="text-[12px] leading-[16px] text-[var(--text-muted)] truncate w-full">
-              {patient.age} años · {patient.current_diagnosis_label}
-            </p>
           </button>
         );
       })}

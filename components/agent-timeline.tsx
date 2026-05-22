@@ -11,6 +11,7 @@ type Props = {
   errorMessage?: string;
   patient?: Patient | null;
   totalAdmissionCost?: number;
+  diagnosisLabelById?: Record<string, string>;
 };
 
 // Helper: walk message parts and split into renderable items in order.
@@ -166,6 +167,7 @@ type ToolOutputs = {
   };
   conditions?: {
     diagnosis_excluded?: boolean;
+    excluded_matches?: string[];
   };
   copay?: {
     admission_cost_usd?: number;
@@ -203,6 +205,7 @@ function deriveDecision(
   outputs: ToolOutputs,
   patient?: Patient | null,
   totalAdmissionCost?: number,
+  diagnosisLabelById?: Record<string, string>,
 ): Decision | null {
   const { policy, conditions, copay } = outputs;
   if (!policy) return null;
@@ -210,6 +213,7 @@ function deriveDecision(
   const today = new Date().toISOString().slice(0, 10);
   const expired = !!policy.valid_until && policy.valid_until < today;
   const excluded = conditions?.diagnosis_excluded === true;
+  const excludedMatches = conditions?.excluded_matches ?? [];
   const notFound = policy.found === false;
 
   const policyLabel = notFound
@@ -226,7 +230,12 @@ function deriveDecision(
     decisionLabel = "Cobertura denegada · vencida";
     decisionColor = "var(--alert)";
   } else if (excluded) {
-    decisionLabel = "Cobertura denegada · exclusión";
+    const labels = excludedMatches
+      .map((id) => diagnosisLabelById?.[id] ?? id)
+      .join(", ");
+    decisionLabel = labels
+      ? `Excluido: ${labels}`
+      : "Cobertura denegada · exclusión";
     decisionColor = "var(--alert)";
   } else if (copay) {
     decisionLabel = "Cobertura aprobada";
@@ -346,13 +355,19 @@ export function AgentTimeline({
   errorMessage,
   patient,
   totalAdmissionCost,
+  diagnosisLabelById,
 }: Props) {
   const items = flatten(messages);
   const grouped = groupParallelTools(items);
   const isStreaming = status === "submitted" || status === "streaming";
   const hasContent = grouped.length > 0;
   const outputs = extractToolOutputs(messages);
-  const decision = deriveDecision(outputs, patient, totalAdmissionCost);
+  const decision = deriveDecision(
+    outputs,
+    patient,
+    totalAdmissionCost,
+    diagnosisLabelById,
+  );
 
   return (
     <section

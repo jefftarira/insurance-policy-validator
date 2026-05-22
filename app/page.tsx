@@ -4,16 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { PatientSelector } from "@/components/patient-selector";
-import { ProcedureSelector } from "@/components/procedure-selector";
+import { CatalogSelector } from "@/components/catalog-selector";
 import { EmailInputs } from "@/components/email-inputs";
 import { AgentTimeline } from "@/components/agent-timeline";
 import { EmailPreviews } from "@/components/email-preview";
 import patientsRaw from "@/data/patients.json";
 import proceduresRaw from "@/data/procedures.json";
-import { PatientsSchema, ProceduresSchema } from "@/lib/types";
+import diagnosesRaw from "@/data/diagnoses.json";
+import {
+  PatientsSchema,
+  ProceduresSchema,
+  DiagnosesSchema,
+} from "@/lib/types";
 
 const patients = PatientsSchema.parse(patientsRaw);
 const procedures = ProceduresSchema.parse(proceduresRaw);
+const diagnoses = DiagnosesSchema.parse(diagnosesRaw);
 
 function validEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -21,7 +27,8 @@ function validEmail(s: string) {
 
 export default function Home() {
   const [patientId, setPatientId] = useState<string | null>(null);
-  const [procedureIds, setProcedureIds] = useState<string[]>([]);
+  const [diagnosisIds, setDiagnosisIds] = useState<string[]>([]);
+  const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [admissionsEmail, setAdmissionsEmail] = useState("");
   const [caseManagerEmail, setCaseManagerEmail] = useState("");
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
@@ -29,8 +36,14 @@ export default function Home() {
   const [endedAt, setEndedAt] = useState<number | null>(null);
   const [origin, setOrigin] = useState("$URL");
 
-  function toggleProcedure(id: string) {
-    setProcedureIds((prev) =>
+  function toggleDiagnosis(id: string) {
+    setDiagnosisIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function toggleService(id: string) {
+    setServiceIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   }
@@ -65,7 +78,7 @@ export default function Home() {
 
   const formReady =
     patientId !== null &&
-    procedureIds.length > 0 &&
+    diagnosisIds.length > 0 &&
     validEmail(admissionsEmail) &&
     validEmail(caseManagerEmail);
 
@@ -84,7 +97,8 @@ export default function Home() {
             patient_id: patientId,
             admissions_email: admissionsEmail,
             case_manager_email: caseManagerEmail,
-            additional_procedure_ids: procedureIds,
+            diagnosis_ids: diagnosisIds,
+            service_ids: serviceIds,
           },
         },
       },
@@ -92,9 +106,18 @@ export default function Home() {
   }
 
   const selectedPatient = patientId ? patients[patientId] : null;
-  const totalAdmissionCost = procedureIds.reduce(
-    (acc, id) => acc + (procedures[id]?.cost_usd ?? 0),
-    0,
+  const totalAdmissionCost =
+    diagnosisIds.reduce((acc, id) => acc + (diagnoses[id]?.cost_usd ?? 0), 0) +
+    serviceIds.reduce((acc, id) => acc + (procedures[id]?.cost_usd ?? 0), 0);
+  const selectedDiagnosisLabels = diagnosisIds
+    .map((id) => diagnoses[id]?.label)
+    .filter((l): l is string => !!l);
+  const diagnosisLabelById = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.values(diagnoses).map((d) => [d.id, d.label]),
+      ) as Record<string, string>,
+    [],
   );
   const elapsedMs =
     startedAt && endedAt
@@ -105,23 +128,20 @@ export default function Home() {
 
   const curlSnippet = useMemo(() => {
     const p = patientId ?? "P1";
-    const dx =
-      (patients[p] as { current_diagnosis?: string } | undefined)
-        ?.current_diagnosis ?? "apendicitis_aguda";
     const adm = admissionsEmail || "admisiones@hospital.demo";
     const cm = caseManagerEmail || "gestor@aseguradora.demo";
-    const procIds = procedureIds.length > 0 ? procedureIds : ["rx_simple", "lab_basico"];
-    const procLine = JSON.stringify(procIds);
+    const dx = diagnosisIds.length > 0 ? diagnosisIds : ["apendicitis_aguda"];
+    const svc = serviceIds.length > 0 ? serviceIds : ["rx_simple", "lab_basico"];
     return `curl -X POST ${origin}/api/webhook/admission \\
   -H "Content-Type: application/json" \\
   -d '{
     "patient_id": "${p}",
-    "current_diagnosis": "${dx}",
     "admissions_email": "${adm}",
     "case_manager_email": "${cm}",
-    "additional_procedure_ids": ${procLine}
+    "diagnosis_ids": ${JSON.stringify(dx)},
+    "service_ids": ${JSON.stringify(svc)}
   }'`;
-  }, [patientId, admissionsEmail, caseManagerEmail, procedureIds, origin]);
+  }, [patientId, admissionsEmail, caseManagerEmail, diagnosisIds, serviceIds, origin]);
 
   return (
     <main className="container mx-auto max-w-[1280px] px-4 sm:px-8 py-6 sm:py-10 flex-1">
@@ -146,12 +166,15 @@ export default function Home() {
         />
       </div>
 
-      <SectionLabel step="02" label="Servicios del ingreso" />
+      <SectionLabel step="02" label="Diagnósticos y servicios" />
       <div className="mb-6">
-        <ProcedureSelector
-          procedures={procedures}
-          selectedIds={procedureIds}
-          onToggle={toggleProcedure}
+        <CatalogSelector
+          diagnoses={diagnoses}
+          services={procedures}
+          selectedDiagnosisIds={diagnosisIds}
+          selectedServiceIds={serviceIds}
+          onToggleDiagnosis={toggleDiagnosis}
+          onToggleService={toggleService}
           disabled={isRunning}
         />
       </div>
@@ -188,11 +211,11 @@ export default function Home() {
           aria-live="polite"
         >
           {formReady
-            ? `Listo — paciente ${patientId} · ${procedureIds.length} servicio${procedureIds.length === 1 ? "" : "s"} · 2 emails válidos.`
+            ? `Listo — paciente ${patientId} · ${diagnosisIds.length} dx + ${serviceIds.length} svc · 2 emails válidos.`
             : !patientId
               ? "Selecciona paciente."
-              : procedureIds.length === 0
-                ? "Selecciona al menos un servicio del ingreso."
+              : diagnosisIds.length === 0
+                ? "Selecciona al menos un diagnóstico."
                 : "Completa los 2 emails."}
           {elapsedMs !== null && (
             <span className="ml-3 font-mono">
@@ -210,6 +233,7 @@ export default function Home() {
           errorMessage={error?.message}
           patient={selectedPatient}
           totalAdmissionCost={totalAdmissionCost}
+          diagnosisLabelById={diagnosisLabelById}
         />
         <EmailPreviews
           patient={selectedPatient}
@@ -217,6 +241,7 @@ export default function Home() {
           caseManagerEmail={caseManagerEmail}
           messages={messages}
           totalAdmissionCost={totalAdmissionCost}
+          diagnosisLabels={selectedDiagnosisLabels}
         />
       </div>
 
