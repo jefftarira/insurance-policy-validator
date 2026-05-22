@@ -92,13 +92,10 @@ export default function Home() {
   }
 
   const selectedPatient = patientId ? patients[patientId] : null;
-  const totalAdmissionCost = selectedPatient
-    ? selectedPatient.admission_cost_usd +
-      procedureIds.reduce(
-        (acc, id) => acc + (procedures[id]?.cost_usd ?? 0),
-        0,
-      )
-    : 0;
+  const totalAdmissionCost = procedureIds.reduce(
+    (acc, id) => acc + (procedures[id]?.cost_usd ?? 0),
+    0,
+  );
   const elapsedMs =
     startedAt && endedAt
       ? endedAt - startedAt
@@ -154,7 +151,6 @@ export default function Home() {
         <ProcedureSelector
           procedures={procedures}
           selectedIds={procedureIds}
-          baseAdmissionCost={selectedPatient?.admission_cost_usd ?? 0}
           onToggle={toggleProcedure}
           disabled={isRunning}
         />
@@ -220,6 +216,7 @@ export default function Home() {
           admissionsEmail={admissionsEmail}
           caseManagerEmail={caseManagerEmail}
           messages={messages}
+          totalAdmissionCost={totalAdmissionCost}
         />
       </div>
 

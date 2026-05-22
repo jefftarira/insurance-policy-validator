@@ -7,7 +7,6 @@
     "current_diagnosis": "apendicitis_aguda",
     "current_diagnosis_label": "Apendicitis aguda",
     "admission_time": "14:22",
-    "admission_cost_usd": 1800,
     "clinical_notes": "Dolor en cuadrante inferior derecho, fiebre 38.2°C, leucocitosis confirmada. Requiere evaluación quirúrgica."
   },
   "P2": {
@@ -18,7 +17,6 @@
     "current_diagnosis": "dolor_toracico",
     "current_diagnosis_label": "Dolor torácico",
     "admission_time": "09:08",
-    "admission_cost_usd": 450,
     "clinical_notes": "Dolor opresivo irradiado a brazo izquierdo, hipertensión preexistente, descartar evento coronario agudo."
   },
   "P3": {
@@ -29,7 +27,6 @@
     "current_diagnosis": "crisis_asmatica",
     "current_diagnosis_label": "Crisis asmática",
     "admission_time": "18:47",
-    "admission_cost_usd": 280,
     "clinical_notes": "Sibilancias bilaterales, SpO₂ 92%, antecedente de asma declarado en la suscripción."
   },
   "P4": {
@@ -40,7 +37,6 @@
     "current_diagnosis": "fractura_cadera",
     "current_diagnosis_label": "Fractura de cadera",
     "admission_time": "16:11",
-    "admission_cost_usd": 4500,
     "clinical_notes": "Caída domiciliaria con dolor severo y deformidad evidente, requiere evaluación quirúrgica urgente."
   }
 }

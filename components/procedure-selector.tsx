@@ -5,7 +5,6 @@ import type { Procedure } from "@/lib/types";
 type Props = {
   procedures: Record<string, Procedure>;
   selectedIds: string[];
-  baseAdmissionCost: number;
   onToggle: (id: string) => void;
   disabled?: boolean;
 };
@@ -13,13 +12,11 @@ type Props = {
 export function ProcedureSelector({
   procedures,
   selectedIds,
-  baseAdmissionCost,
   onToggle,
   disabled,
 }: Props) {
   const ordered = Object.values(procedures);
-  const extras = selectedIds.reduce((acc, id) => acc + (procedures[id]?.cost_usd ?? 0), 0);
-  const total = baseAdmissionCost + extras;
+  const total = selectedIds.reduce((acc, id) => acc + (procedures[id]?.cost_usd ?? 0), 0);
 
   return (
     <div>
@@ -56,18 +53,12 @@ export function ProcedureSelector({
         })}
       </div>
 
-      <div className="border-t border-[var(--border)] pt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[13px]">
+      <div className="border-t border-[var(--border)] pt-3 flex items-baseline gap-3 text-[13px]">
         <span className="text-[var(--text-muted)]">
-          Base ingreso{" "}
-          <span className="font-mono text-[var(--text)]">${baseAdmissionCost}</span>
-        </span>
-        <span className="text-[var(--text-muted)]">
-          + Procedimientos{" "}
-          <span className="font-mono text-[var(--text)]">${extras}</span>
+          {selectedIds.length} {selectedIds.length === 1 ? "servicio" : "servicios"} seleccionado{selectedIds.length === 1 ? "" : "s"}
         </span>
         <span className="ml-auto font-semibold text-[var(--text)]">
-          Total{" "}
-          <span className="font-mono">${total}</span>
+          Total <span className="font-mono">${total}</span>
         </span>
       </div>
     </div>

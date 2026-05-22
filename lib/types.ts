@@ -8,7 +8,6 @@ export const PatientSchema = z.object({
   current_diagnosis: z.string(),
   current_diagnosis_label: z.string(),
   admission_time: z.string(),
-  admission_cost_usd: z.number(),
   clinical_notes: z.string(),
 });
 

@@ -8,6 +8,7 @@ type Props = {
   admissionsEmail: string;
   caseManagerEmail: string;
   messages: UIMessage[];
+  totalAdmissionCost: number;
 };
 
 type ToolPart = {
@@ -47,11 +48,13 @@ function PreviewCard({
   recipientEmail,
   patient,
   toolStates,
+  totalAdmissionCost,
 }: {
   recipientLabel: string;
   recipientEmail: string;
   patient: Patient | null;
   toolStates: Record<string, { state: string; output?: unknown }>;
+  totalAdmissionCost: number;
 }) {
   const policy = toolStates.validate_policy?.output as
     | { plan?: string; valid_until?: string; deductible_usd?: number; coverage_pct?: number }
@@ -126,13 +129,13 @@ function PreviewCard({
             <span>
               Costo ${copay.admission_cost_usd} · cubre ${copay.covered_by_policy_usd} · paciente paga ${copay.patient_copay_usd}
             </span>
-          ) : conditions?.diagnosis_excluded && patient ? (
+          ) : conditions?.diagnosis_excluded ? (
             <span>
-              Diagnóstico excluido · paciente paga total ${patient.admission_cost_usd}
+              Diagnóstico excluido · paciente paga total ${totalAdmissionCost}
             </span>
-          ) : policyExpired && patient ? (
+          ) : policyExpired ? (
             <span>
-              Póliza vencida · paciente paga total ${patient.admission_cost_usd}
+              Póliza vencida · paciente paga total ${totalAdmissionCost}
             </span>
           ) : (
             <em className="text-[var(--text-muted)] not-italic">esperando cálculo…</em>
@@ -172,6 +175,7 @@ export function EmailPreviews({
   admissionsEmail,
   caseManagerEmail,
   messages,
+  totalAdmissionCost,
 }: Props) {
   const toolStates = extractToolStates(messages);
 
@@ -182,12 +186,14 @@ export function EmailPreviews({
         recipientEmail={admissionsEmail}
         patient={patient}
         toolStates={toolStates}
+        totalAdmissionCost={totalAdmissionCost}
       />
       <PreviewCard
         recipientLabel="Gestor de Casos — Seguro"
         recipientEmail={caseManagerEmail}
         patient={patient}
         toolStates={toolStates}
+        totalAdmissionCost={totalAdmissionCost}
       />
     </aside>
   );

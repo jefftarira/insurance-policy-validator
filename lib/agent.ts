@@ -34,12 +34,11 @@ export function runAdmissionAgent(params: AgentParams) {
 
   const tools = buildTools(ctx);
 
-  const additionalProcedures = getProcedures(params.additionalProcedureIds ?? []);
-  const additionalCost = additionalProcedures.reduce(
+  const selectedServices = getProcedures(params.additionalProcedureIds ?? []);
+  const totalAdmissionCost = selectedServices.reduce(
     (acc, p) => acc + p.cost_usd,
     0,
   );
-  const totalAdmissionCost = patient.admission_cost_usd + additionalCost;
 
   const userPayload = {
     event: "admission_to_emergency",
@@ -52,15 +51,11 @@ export function runAdmissionAgent(params: AgentParams) {
     current_diagnosis_label: patient.current_diagnosis_label,
     admission_time: patient.admission_time,
     admission_cost_usd: totalAdmissionCost,
-    cost_breakdown: {
-      base_admission_usd: patient.admission_cost_usd,
-      additional_procedures: additionalProcedures.map((p) => ({
-        id: p.id,
-        label: p.label,
-        cost_usd: p.cost_usd,
-      })),
-      total_usd: totalAdmissionCost,
-    },
+    services: selectedServices.map((p) => ({
+      id: p.id,
+      label: p.label,
+      cost_usd: p.cost_usd,
+    })),
     clinical_notes: patient.clinical_notes,
     notification_recipients: {
       admissions_email: params.admissionsEmail,

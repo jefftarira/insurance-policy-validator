@@ -239,7 +239,7 @@ function deriveDecision(
     decisionColor = "var(--running)";
   }
 
-  const fullCost = totalAdmissionCost ?? patient?.admission_cost_usd;
+  const fullCost = totalAdmissionCost;
 
   let amountLabel: string;
   let amountSublabel: string;
