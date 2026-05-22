@@ -228,12 +228,6 @@ function Header({
         </span>
       </div>
       <div className="flex items-center gap-4">
-        <a
-          href="#webhook"
-          className="font-mono text-[12px] text-[var(--text-muted)] no-underline border border-[var(--border)] rounded px-2.5 py-1.5 hover:text-[var(--text)] hover:border-[var(--text-muted)]"
-        >
-          POST /api/webhook/admission
-        </a>
         <button
           type="button"
           onClick={onToggleTheme}
