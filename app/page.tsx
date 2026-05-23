@@ -328,6 +328,15 @@ export default function Home() {
 {`{
   "ok": true,
   "patient_id": "P1",
+  "coverage": {
+    "decision": "Cobertura plena",
+    "approved": true,
+    "policy_active": true,
+    "copay_usd": 80,
+    "admission_cost_usd": 120,
+    "covered_by_policy_usd": 40,
+    "agent_analysis": "Plan Oro vigente, sin exclusiones..."
+  },
   "notifications": {
     "success": true,
     "admissions_message_id": "<smtp-id>",
@@ -339,7 +348,7 @@ export default function Home() {
           </pre>
           <p className="text-[12px] text-[var(--text-muted)] mt-2 leading-[18px]">
             <span className="font-mono text-[11px]">diagnosis_ids</span> es requerido (mínimo 1 ID del catálogo de Sección 02 — copia el ID monoespaciado debajo de cada label).
-            En caso de error de payload el servidor devuelve <span className="font-mono text-[11px]">400</span> con el detalle del schema de Zod.
+            El bloque <span className="font-mono text-[11px]">coverage</span> resume la decisión del agente y el copago calculado; sirve para integraciones que necesitan el resultado sin parsear el texto narrativo. En caso de error de payload el servidor devuelve <span className="font-mono text-[11px]">400</span> con el detalle del schema de Zod.
           </p>
         </div>
       </section>
