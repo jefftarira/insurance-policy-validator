@@ -32,25 +32,11 @@ const WEBHOOK_SCENARIOS: WebhookScenario[] = [
     diagnosis_ids: ["apendicitis_aguda"],
   },
   {
-    key: "p2-vencida",
-    label: "P2 Carlos · Denegada (póliza vencida)",
-    outcome: "POL-1875 venció 2026-03-15 → paciente paga total",
-    patient_id: "P2",
-    diagnosis_ids: ["dolor_toracico"],
-  },
-  {
     key: "p3-excluido",
     label: "P3 Ana · Denegada por exclusión",
     outcome: "crisis_asmatica está en excluded_diagnoses → denegada",
     patient_id: "P3",
     diagnosis_ids: ["crisis_asmatica"],
-  },
-  {
-    key: "p3-cubierta",
-    label: "P3 Ana · Cubierta (diagnóstico no excluido)",
-    outcome: "Mismo paciente, gastroenteritis_aguda no excluida → copago aplica",
-    patient_id: "P3",
-    diagnosis_ids: ["gastroenteritis_aguda"],
   },
 ];
 
