@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { result, context } = runAdmissionAgent({
+  const { result, context, coverage } = runAdmissionAgent({
     patientId: parsed.data.patient_id,
     admissionsEmail: parsed.data.admissions_email,
     caseManagerEmail: parsed.data.case_manager_email,
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
   return Response.json({
     ok: true,
     patient_id: parsed.data.patient_id,
+    coverage: coverage(),
     notifications: summary,
     agent_summary: finalText,
   });
@@ -59,6 +60,17 @@ export async function GET() {
       admissions_email: "admisiones@hospital.demo",
       case_manager_email: "gestor@aseguradora.demo",
       diagnosis_ids: ["apendicitis_aguda"],
+    },
+    response_fields: {
+      coverage: {
+        decision: "Cobertura plena | Cobertura parcial | Cobertura denegada | Caso ambiguo",
+        approved: "true si cobertura plena; false si parcial o denegada",
+        policy_active: "true si valid_until >= hoy",
+        copay_usd: "copago del paciente en USD",
+        admission_cost_usd: "costo total del ingreso",
+        covered_by_policy_usd: "monto cubierto por la póliza",
+        agent_analysis: "razonamiento clínico-financiero del agente",
+      },
     },
   });
 }

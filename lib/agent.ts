@@ -1,6 +1,11 @@
 import { google } from "@ai-sdk/google";
 import { streamText, stepCountIs } from "ai";
-import { buildTools, type AgentContext, type SendResult } from "@/lib/tools";
+import {
+  buildTools,
+  buildCoverageSummary,
+  type AgentContext,
+  type SendResult,
+} from "@/lib/tools";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { getPatient, getPolicy, getDiagnoses } from "@/lib/data";
 import {
@@ -38,6 +43,13 @@ export function runAdmissionAgent(params: AgentParams) {
     diagnosisIds: params.diagnosisIds,
     diagnosisLabel: selectedDiagnoses.map((d) => d.label).join(", "),
     sendState: { sent: false, result: null },
+    validationState: {
+      policy: null,
+      copay: null,
+      conditions: null,
+      decision: null,
+      analysis: null,
+    },
   };
 
   const tools = buildTools(ctx);
@@ -81,7 +93,10 @@ export function runAdmissionAgent(params: AgentParams) {
       // Safety net: ensure send_notifications was called.
       // If the model finished without invoking it, force a manual send.
       if (!ctx.sendState.sent) {
+        syncValidationFromSteps(ctx, steps);
         const { decision, rationale } = inferDecisionFromSteps(steps);
+        ctx.validationState.decision = decision;
+        ctx.validationState.analysis = rationale;
         const policy = getPolicy(patient.policy_id);
         const today = new Date().toISOString().slice(0, 10);
         const policyStatus = policy
@@ -131,7 +146,7 @@ export function runAdmissionAgent(params: AgentParams) {
     },
   });
 
-  return { result, context: ctx };
+  return { result, context: ctx, coverage: () => buildCoverageSummary(ctx.validationState) };
 }
 
 function modelFromEnv() {
@@ -148,6 +163,30 @@ type StepLike = {
   toolCalls?: Array<{ toolName?: string }>;
   toolResults?: Array<{ toolName?: string; output?: unknown }>;
 };
+
+function syncValidationFromSteps(ctx: AgentContext, steps: StepLike[]) {
+  for (const step of steps) {
+    for (const r of step.toolResults ?? []) {
+      const out = r.output as Record<string, unknown> | undefined;
+      if (!out) continue;
+      if (r.toolName === "validate_policy" && !ctx.validationState.policy) {
+        ctx.validationState.policy = out as AgentContext["validationState"]["policy"];
+      }
+      if (r.toolName === "check_preexisting_conditions" && !ctx.validationState.conditions) {
+        ctx.validationState.conditions = out as AgentContext["validationState"]["conditions"];
+      }
+      if (r.toolName === "compute_copay" && !ctx.validationState.copay) {
+        ctx.validationState.copay = out as AgentContext["validationState"]["copay"];
+      }
+    }
+    for (const c of step.toolCalls ?? []) {
+      if (c.toolName !== "send_notifications") continue;
+      const input = (c as { input?: { decision?: string; rationale?: string } }).input;
+      if (input?.decision) ctx.validationState.decision = input.decision;
+      if (input?.rationale) ctx.validationState.analysis = input.rationale;
+    }
+  }
+}
 
 function inferDecisionFromSteps(steps: StepLike[]) {
   let validUntil: string | null = null;

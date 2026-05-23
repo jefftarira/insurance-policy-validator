@@ -63,3 +63,15 @@ export const NotificationResultSchema = z.object({
 });
 
 export type NotificationResult = z.infer<typeof NotificationResultSchema>;
+
+export const CoverageSummarySchema = z.object({
+  decision: z.string().nullable(),
+  approved: z.boolean().nullable(),
+  policy_active: z.boolean().nullable(),
+  copay_usd: z.number().nullable(),
+  admission_cost_usd: z.number().nullable(),
+  covered_by_policy_usd: z.number().nullable(),
+  agent_analysis: z.string().nullable(),
+});
+
+export type CoverageSummary = z.infer<typeof CoverageSummarySchema>;
