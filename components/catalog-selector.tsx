@@ -35,20 +35,25 @@ export function CatalogSelector({
               disabled={disabled}
               onClick={() => onToggleDiagnosis(item.id)}
               className={[
-                "flex items-center justify-between gap-3 text-left",
-                "bg-[var(--surface)] rounded-md px-3 py-2.5",
+                "flex items-start justify-between gap-3 text-left",
+                "bg-[var(--surface)] rounded-md px-3 py-2",
                 "transition-[border-color,background] duration-150",
                 "focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2",
                 "disabled:opacity-60 disabled:cursor-not-allowed",
                 selected
-                  ? "border-2 border-[var(--accent)] bg-[var(--accent-soft)] px-[11px] py-[9px]"
+                  ? "border-2 border-[var(--accent)] bg-[var(--accent-soft)] px-[11px] py-[7px]"
                   : "border border-[var(--border)] hover:border-[var(--text-muted)]",
               ].join(" ")}
             >
-              <span className="text-[13px] leading-[18px] text-[var(--text)] truncate">
-                {item.label}
-              </span>
-              <span className="font-mono text-[12px] text-[var(--text-muted)] flex-shrink-0">
+              <div className="flex flex-col min-w-0 gap-0.5">
+                <span className="text-[13px] leading-[18px] text-[var(--text)] truncate">
+                  {item.label}
+                </span>
+                <span className="font-mono text-[10px] leading-[12px] text-[var(--text-muted)] truncate">
+                  {item.id}
+                </span>
+              </div>
+              <span className="font-mono text-[12px] text-[var(--text-muted)] flex-shrink-0 mt-0.5">
                 ${item.cost_usd}
               </span>
             </button>

@@ -15,6 +15,62 @@ import { PatientsSchema, DiagnosesSchema } from "@/lib/types";
 const patients = PatientsSchema.parse(patientsRaw);
 const diagnoses = DiagnosesSchema.parse(diagnosesRaw);
 
+type WebhookScenario = {
+  key: string;
+  label: string;
+  outcome: string;
+  patient_id: string;
+  diagnosis_ids: string[];
+};
+
+const WEBHOOK_SCENARIOS: WebhookScenario[] = [
+  {
+    key: "p1-plena",
+    label: "P1 María · Cobertura plena",
+    outcome: "Plan Oro vigente, sin exclusiones → copago = deducible $80",
+    patient_id: "P1",
+    diagnosis_ids: ["apendicitis_aguda"],
+  },
+  {
+    key: "p2-vencida",
+    label: "P2 Carlos · Denegada (póliza vencida)",
+    outcome: "POL-1875 venció 2026-03-15 → paciente paga total",
+    patient_id: "P2",
+    diagnosis_ids: ["dolor_toracico"],
+  },
+  {
+    key: "p3-excluido",
+    label: "P3 Ana · Denegada por exclusión",
+    outcome: "crisis_asmatica está en excluded_diagnoses → denegada",
+    patient_id: "P3",
+    diagnosis_ids: ["crisis_asmatica"],
+  },
+  {
+    key: "p3-cubierta",
+    label: "P3 Ana · Cubierta (diagnóstico no excluido)",
+    outcome: "Mismo paciente, gastroenteritis_aguda no excluida → copago aplica",
+    patient_id: "P3",
+    diagnosis_ids: ["gastroenteritis_aguda"],
+  },
+];
+
+function buildCurl(opts: {
+  origin: string;
+  patient_id: string;
+  diagnosis_ids: string[];
+  admissions_email: string;
+  case_manager_email: string;
+}) {
+  return `curl -X POST ${opts.origin}/api/webhook/admission \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "patient_id": "${opts.patient_id}",
+    "admissions_email": "${opts.admissions_email}",
+    "case_manager_email": "${opts.case_manager_email}",
+    "diagnosis_ids": ${JSON.stringify(opts.diagnosis_ids)}
+  }'`;
+}
+
 function validEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
@@ -113,20 +169,27 @@ export default function Home() {
         ? Date.now() - startedAt
         : null;
 
-  const curlSnippet = useMemo(() => {
-    const p = patientId ?? "P1";
-    const adm = admissionsEmail || "admisiones@hospital.demo";
-    const cm = caseManagerEmail || "gestor@aseguradora.demo";
-    const dx = diagnosisIds.length > 0 ? diagnosisIds : ["apendicitis_aguda"];
-    return `curl -X POST ${origin}/api/webhook/admission \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "patient_id": "${p}",
-    "admissions_email": "${adm}",
-    "case_manager_email": "${cm}",
-    "diagnosis_ids": ${JSON.stringify(dx)}
-  }'`;
-  }, [patientId, admissionsEmail, caseManagerEmail, diagnosisIds, origin]);
+  const effectiveAdmissionsEmail = admissionsEmail || "admisiones@hospital.demo";
+  const effectiveCaseManagerEmail = caseManagerEmail || "gestor@aseguradora.demo";
+
+  const curlSnippet = useMemo(
+    () =>
+      buildCurl({
+        origin,
+        patient_id: patientId ?? "P1",
+        diagnosis_ids:
+          diagnosisIds.length > 0 ? diagnosisIds : ["apendicitis_aguda"],
+        admissions_email: effectiveAdmissionsEmail,
+        case_manager_email: effectiveCaseManagerEmail,
+      }),
+    [
+      patientId,
+      diagnosisIds,
+      effectiveAdmissionsEmail,
+      effectiveCaseManagerEmail,
+      origin,
+    ],
+  );
 
   return (
     <main className="container mx-auto max-w-[1280px] px-4 sm:px-8 py-6 sm:py-10 flex-1">
@@ -227,27 +290,118 @@ export default function Home() {
         />
       </div>
 
-      <section
-        id="webhook"
-        className="mt-9 bg-[var(--surface-2)] border border-[var(--border)] rounded-md px-5 py-4"
-      >
-        <div className="flex justify-between items-center mb-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
-            Mismo flujo vía curl (webhook real)
-          </p>
-          <button
-            type="button"
-            className="font-body text-[11px] font-medium border border-[var(--border)] rounded text-[var(--text-muted)] px-2 py-0.5 bg-transparent cursor-pointer hover:text-[var(--text)]"
-            onClick={() => navigator.clipboard.writeText(curlSnippet)}
-          >
-            Copy
-          </button>
+      <SectionLabel step="05" label="Webhook directo (API)" className="mt-9" />
+      <section id="webhook" className="flex flex-col gap-5">
+        <p className="text-[14px] leading-[22px] text-[var(--text-muted)] max-w-[720px]">
+          Mismo motor que la UI, expuesto como <span className="font-mono text-[13px]">POST /api/webhook/admission</span>.
+          Útil para integrar con un HIS hospitalario, automatizar pruebas, o disparar el
+          agente desde CLI sin abrir el browser. La respuesta es síncrona — el servidor
+          espera a que el agente termine antes de devolver el JSON.
+        </p>
+
+        <CurlBlock
+          title="Tu selección actual"
+          subtitle="Refleja lo que tenés cargado arriba"
+          curl={curlSnippet}
+          tone="primary"
+        />
+
+        <div>
+          <div className="flex items-baseline gap-2 mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text)]">
+              Escenarios listos para probar
+            </p>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Copy → paste → ver cómo cambia la decisión del agente
+            </p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {WEBHOOK_SCENARIOS.map((scenario) => (
+              <CurlBlock
+                key={scenario.key}
+                title={scenario.label}
+                subtitle={scenario.outcome}
+                curl={buildCurl({
+                  origin,
+                  patient_id: scenario.patient_id,
+                  diagnosis_ids: scenario.diagnosis_ids,
+                  admissions_email: effectiveAdmissionsEmail,
+                  case_manager_email: effectiveCaseManagerEmail,
+                })}
+                tone="default"
+              />
+            ))}
+          </div>
         </div>
-        <pre className="font-mono text-[12px] leading-[18px] text-[var(--text)] whitespace-pre overflow-x-auto m-0">
-          {curlSnippet}
-        </pre>
+
+        <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-md px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)] mb-2">
+            Respuesta del servidor (JSON)
+          </p>
+          <pre className="font-mono text-[12px] leading-[18px] text-[var(--text)] whitespace-pre overflow-x-auto m-0">
+{`{
+  "ok": true,
+  "patient_id": "P1",
+  "notifications": {
+    "success": true,
+    "admissions_message_id": "<smtp-id>",
+    "case_manager_message_id": "<smtp-id>",
+    "error": null
+  },
+  "agent_summary": "Plan Oro vigente, sin exclusiones..."
+}`}
+          </pre>
+          <p className="text-[12px] text-[var(--text-muted)] mt-2 leading-[18px]">
+            <span className="font-mono text-[11px]">diagnosis_ids</span> es requerido (mínimo 1 ID del catálogo de Sección 02 — copia el ID monoespaciado debajo de cada label).
+            En caso de error de payload el servidor devuelve <span className="font-mono text-[11px]">400</span> con el detalle del schema de Zod.
+          </p>
+        </div>
       </section>
     </main>
+  );
+}
+
+function CurlBlock({
+  title,
+  subtitle,
+  curl,
+  tone,
+}: {
+  title: string;
+  subtitle: string;
+  curl: string;
+  tone: "primary" | "default";
+}) {
+  return (
+    <div
+      className={[
+        "border rounded-md px-4 py-3",
+        tone === "primary"
+          ? "border-[var(--accent)] bg-[var(--accent-soft)]"
+          : "border-[var(--border)] bg-[var(--surface-2)]",
+      ].join(" ")}
+    >
+      <div className="flex justify-between items-start gap-3 mb-2">
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold text-[var(--text)] truncate">
+            {title}
+          </p>
+          <p className="text-[11px] text-[var(--text-muted)] leading-[16px] mt-0.5">
+            {subtitle}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="font-body text-[11px] font-medium border border-[var(--border)] rounded text-[var(--text-muted)] px-2 py-0.5 bg-transparent cursor-pointer hover:text-[var(--text)] flex-shrink-0"
+          onClick={() => navigator.clipboard.writeText(curl)}
+        >
+          Copy
+        </button>
+      </div>
+      <pre className="font-mono text-[11px] leading-[16px] text-[var(--text)] whitespace-pre overflow-x-auto m-0">
+        {curl}
+      </pre>
+    </div>
   );
 }
 
